@@ -15,5 +15,5 @@ server_socket.bind(server_address)
 
 while True:
     recv_message, address = server_socket.recvfrom(buff_size)
-    print(recv_message.decode())
+    print(recv_message.decode(), end='',flush=True)
 
