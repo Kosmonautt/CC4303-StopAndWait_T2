@@ -13,8 +13,7 @@ server_address = ('localhost',port)
 # se hace bind al server
 server_socket.bind(server_address)
 
-message, address = aux.receive_full_mesage(server_socket, buff_size, "|")
-
-print(message.decode())
-
+while True:
+    recv_message, address = server_socket.recvfrom(buff_size)
+    print(recv_message.decode())
 

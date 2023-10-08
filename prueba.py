@@ -1,5 +1,7 @@
-mssg = 'vaina-'
+mssg = 'ooooohhh la wea wena'
 
-mssg2 = mssg.split('-')
+mssg_b = mssg.encode()
 
-print(mssg2)
+buff_size = 4
+
+print(mssg_b)
