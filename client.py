@@ -1,6 +1,5 @@
 import socket
 import sys
-import aux 
 
 # socket no orientado a conexión
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

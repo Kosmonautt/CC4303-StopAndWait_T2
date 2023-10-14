@@ -1,5 +1,4 @@
 import socket
-import aux
 
 # socket no orientado a conexión
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
