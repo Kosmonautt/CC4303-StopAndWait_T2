@@ -12,11 +12,16 @@ class SocketTCP:
     def set_dirDestination(self, dirDestination):
         self.dirDestination = dirDestination
 
-    def set_dirOrigin(self, dirOrigin):
-        self.dirOrigin = dirOrigin
-
     def set_nSec(self, nSec):
         self.nSec = nSec
+
+    # envía el mensaje (en bytes) dado a la dirección ya seteada con su número de secuencia
+    def send_message(self, mssg):
+        self.socketUDP.sendto(mssg, self.dirDestination)
+
+    # recibe un mensaje escuchando en la dirección dada
+    def recv_message(self, buff_size):
+        return self.socketUDP.recvfrom(buff_size)
 
     # pasa segmento TCP a estructura
     @staticmethod
@@ -46,3 +51,10 @@ class SocketTCP:
             seg += struct[4]
         # se retorna el segmento
         return seg
+    
+    # asocia el socket UDP y la dirección de destino a la dirección dada
+    def bind(self, address):
+        # origen en el parámetro adress de la clase
+        self.dirOrigin = address
+        # se le hace bind al socket UDP
+        self.socketUDP.bind(address)
