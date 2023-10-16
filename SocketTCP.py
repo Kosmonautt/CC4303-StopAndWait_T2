@@ -21,11 +21,11 @@ class SocketTCP:
         self.nSec = nSec
 
     # envía el mensaje (en bytes) dado a la dirección ya seteada con su número de secuencia
-    def send_message(self, mssg):
+    def send_pure(self, mssg):
         self.socketUDP.sendto(mssg, self.dirDestination)
 
     # recibe un mensaje escuchando en la dirección dada
-    def recv_message(self, buff_size):
+    def recv_pure(self, buff_size):
         return self.socketUDP.recvfrom(buff_size)
 
     # pasa segmento TCP a estructura
@@ -78,10 +78,10 @@ class SocketTCP:
         # se pasa a bytes
         seg_SYN = seg_SYN.encode()
         # se envía el mensaje
-        self.send_message(seg_SYN)
+        self.send_pure(seg_SYN)
 
         # se recibe la respuesta  SYN+ACK del server con el mensaje y la dirección de la response
-        message_SYN_ACK, response_adress = self.recv_message(buff_size)
+        message_SYN_ACK, response_adress = self.recv_pure(buff_size)
         # se setea la nueva dirección de destino
         self.set_dirDestination(response_adress)
         # se pasa el mensaje a una estructura
@@ -106,13 +106,13 @@ class SocketTCP:
         # se pasa a bytes
         seg_ACK = seg_ACK.encode()
         # se envía el mensaje
-        self.send_message(seg_ACK)
+        self.send_pure(seg_ACK)
 
     # función que espera una petición syn, si el handshake
     # se realiza correctamente retorna un nuevo objeto SocketTCP
     def accept(self):
         # se recibe la petición SYN
-        message_SYN, address_SYN = self.recv_message(buff_size)
+        message_SYN, address_SYN = self.recv_pure(buff_size)
         # se pasa el mensaje a estructura
         struct_handshake_SYN = self.parse_segment(message_SYN.decode())
 
@@ -142,10 +142,10 @@ class SocketTCP:
         # se pasa a bytes
         seg_SYN_ACK = seg_SYN_ACK.encode()
         # se envía el mensaje
-        response_SocketTCP.send_message(seg_SYN_ACK)
+        response_SocketTCP.send_pure(seg_SYN_ACK)
 
         # se recibe la petición ACK
-        message_ACK, address_ACK = response_SocketTCP.recv_message(buff_size)
+        message_ACK, address_ACK = response_SocketTCP.recv_pure(buff_size)
         # se pasa el mensaje a estructura
         struct_handshake_ACK = self.parse_segment(message_ACK.decode())
 
