@@ -17,24 +17,30 @@ server_address = ('localhost',port)
 # se hace bind al socket sever TCP
 server_socket_TCP.bind(server_address)
 
-while True:
-    # se recibe el segmento y la diección desde donde se mandó
-    recv_message, address = server_socket_TCP.recv_message(buff_size)
-    # se pasa el mensaje a string
-    recv_message = recv_message.decode()
-    # se pasa a estrcutura
-    recv_message_struct = server_socket_TCP.parse_segment(recv_message)
+# handshake
+connection_socket_TCP, new_adress = server_socket_TCP.accept()
 
-    # se consiguen las diferentes partes del mensaje
-    SYN = recv_message_struct[0]
-    ACK = recv_message_struct[1]
-    FIN = recv_message_struct[2]
-    SEQ = recv_message_struct[3]
-    data = None
+print(new_adress)
+print(connection_socket_TCP)
 
-    if (len(recv_message_struct) > 4):
-        data = recv_message_struct[4]
+# while True:
+#     # se recibe el segmento y la diección desde donde se mandó
+#     recv_message, address = server_socket_TCP.recv_message(buff_size)
+#     # se pasa el mensaje a string
+#     recv_message = recv_message.decode()
+#     # se pasa a estrcutura
+#     recv_message_struct = server_socket_TCP.parse_segment(recv_message)
 
-    # se imprime solo pa rate de data del segmento
-    print(data,end="",flush=True)
+#     # se consiguen las diferentes partes del mensaje
+#     SYN = recv_message_struct[0]
+#     ACK = recv_message_struct[1]
+#     FIN = recv_message_struct[2]
+#     SEQ = recv_message_struct[3]
+#     data = None
+
+#     if (len(recv_message_struct) > 4):
+#         data = recv_message_struct[4]
+
+#     # se imprime solo pa rate de data del segmento
+#     print(data,end="",flush=True)
 

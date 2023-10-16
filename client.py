@@ -34,29 +34,32 @@ client_socket_TCP.set_nSec(100)
 # bytes enviados
 bytes_sent = 0
 
-while bytes_sent < len_mssg:
-    # máximo bytes hasta el que se va a enviar
-    max_byte = min(len_mssg, bytes_sent + buff_size)
+# hanshake
+client_socket_TCP.connect(server_address)
 
-    # obtenemos el trozo de mensaje (en bytes)
-    message_slice = mssg[bytes_sent: max_byte]
+# while bytes_sent < len_mssg:
+#     # máximo bytes hasta el que se va a enviar
+#     max_byte = min(len_mssg, bytes_sent + buff_size)
 
-    # número de bytes que enviamos
-    len_mssg_bytes = len(message_slice)
+#     # obtenemos el trozo de mensaje (en bytes)
+#     message_slice = mssg[bytes_sent: max_byte]
 
-    # se actualiza el número de secuencia
-    client_socket_TCP.set_nSec(client_socket_TCP.nSec + len_mssg_bytes)
+#     # número de bytes que enviamos
+#     len_mssg_bytes = len(message_slice)
 
-    # se crea estructura del mensaje
-    mssg_struct = ["0","0","0",str(client_socket_TCP.nSec), message_slice.decode()]
-    # se crea el mensaje que envía el socket 
-    mssg_to_send = client_socket_TCP.create_segment(mssg_struct)
-    # se pasa a bytes
-    mssg_to_send = mssg_to_send.encode()
-    # se envía el mensaje
-    client_socket_TCP.send_message(mssg_to_send)
-    # actualizamos cuántos bytes se han mandado
-    bytes_sent += len_mssg_bytes
+#     # se actualiza el número de secuencia
+#     client_socket_TCP.set_nSec(client_socket_TCP.nSec + len_mssg_bytes)
+
+#     # se crea estructura del mensaje
+#     mssg_struct = ["0","0","0",str(client_socket_TCP.nSec), message_slice.decode()]
+#     # se crea el mensaje que envía el socket 
+#     mssg_to_send = client_socket_TCP.create_segment(mssg_struct)
+#     # se pasa a bytes
+#     mssg_to_send = mssg_to_send.encode()
+#     # se envía el mensaje
+#     client_socket_TCP.send_message(mssg_to_send)
+#     # actualizamos cuántos bytes se han mandado
+#     bytes_sent += len_mssg_bytes
 
 
 
