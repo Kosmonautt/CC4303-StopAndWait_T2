@@ -7,7 +7,7 @@ client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # socketTCP
 client_socket_TCP = SocketTCP.SocketTCP()
 # se le agrega el socket 
-client_socket_TCP.socketUDP = client_socket
+client_socket_TCP.set_socketUDP(client_socket)
 # tamaño del buffer (16 bytes)
 buff_size = 16
 
@@ -27,7 +27,7 @@ port = 8000
 # dirección hacia donde se envía el mensaje
 server_address = ('localhost',port)
 # se asocia al socketTCP
-client_socket_TCP.dirDestination = server_address
+client_socket_TCP.set_dirDestination(server_address)
 # se setea seq
 client_socket_TCP.set_nSec(100)
 

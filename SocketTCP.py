@@ -9,6 +9,8 @@ class SocketTCP:
         self.dirDestination = None
         self.dirOrigin = None
         self.nSec = None
+        # número de puerto al crear un socket de respuesta para el cliente
+        self.new_socket_port = None
     
     # setters de los diferentes parámetros
     def set_socketUDP(self, socketUDP):
@@ -63,6 +65,8 @@ class SocketTCP:
         self.dirOrigin = address
         # se le hace bind al socket UDP
         self.socketUDP.bind(address)
+        # se le inicia el puerto siguiente a los sockets nuevos
+        self.new_socket_port = address[1]+1
     
     # función que inicia la conexión de un SocketTCP con otro que se encuentra escuchando en la diección adress
     def connect(self, address):
@@ -133,7 +137,9 @@ class SocketTCP:
         # se le da una nueva dirección de destino (la del cliente)
         response_SocketTCP.set_dirDestination(address_SYN)
         # se le hace binding a una dirección distinta a la del server
-        response_SocketTCP.bind(('localhost',8001)) # agregarque vaya moviendose el coso con un class method
+        response_SocketTCP.bind(('localhost',self.new_socket_port))
+        # se aumenta el número del puerto para un futuro socket
+        self.new_socket_port += 1
 
         # se crea el mensaje SYN+ACK
         struct_handshake_SYN_ACK = ["1","1","0",str(response_SocketTCP.nSec)]

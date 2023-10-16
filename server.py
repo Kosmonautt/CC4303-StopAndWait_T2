@@ -6,7 +6,7 @@ server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # socket TCP
 server_socket_TCP = SocketTCP.SocketTCP()
 # se le agrega el socket 
-server_socket_TCP.socketUDP = server_socket
+server_socket_TCP.set_socketUDP(server_socket)
 # tamaño del buffer (16 bytes)
 buff_size = 48
 
