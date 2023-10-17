@@ -11,6 +11,10 @@ class SocketTCP:
         self.nSec = None
         # número de puerto al crear un socket de respuesta para el cliente
         self.new_socket_port = None
+        self.timeout = 0
+        self.buffSize = None
+        # dice si queda por leer del mensaje con un recv
+        self.bytes_left_to_read = 0
     
     # setters de los diferentes parámetros
     def set_socketUDP(self, socketUDP):
@@ -22,6 +26,12 @@ class SocketTCP:
     def set_nSec(self, nSec):
         self.nSec = nSec
 
+    def set_timeout(self, timeout):
+        # timeout en la clase
+        self.timeout = timeout
+        # timeout en su socketUDP
+        self.socketUDP.settimeout(timeout)
+
     # envía el mensaje (en bytes) dado a la dirección ya seteada con su número de secuencia
     def send_pure(self, mssg):
         self.socketUDP.sendto(mssg, self.dirDestination)
@@ -29,6 +39,168 @@ class SocketTCP:
     # recibe un mensaje escuchando en la dirección dada
     def recv_pure(self, buff_size):
         return self.socketUDP.recvfrom(buff_size)
+    
+    # función que recibe un mensaje codificado y lo envía por completo a un destinatario, lo envía en pedazos
+    # de 16 bytes
+    def send(self, message):
+        # se consigue el largo del mensaje total codificado
+        len_mssg = len(message)
+
+        # dice si se envió el largo con éxtio
+        length_sent = False
+        # se crea la estructura del mensaje con headers con el largo del mensaje total
+        struct_lenght = ["0","0","0",str(self.nSec), str(len_mssg)]
+        # se pasa a segmento
+        message_length = self.create_segment(struct_lenght)
+
+        # se le dice que espero 5 segundos al socket
+        self.set_timeout(5)
+        # tamaño del buffer del socketUDP, headers+data
+        buff_size_UDP = 48
+
+        while not length_sent:
+            # se envía el largo del mensaje total
+            self.send_pure(message_length.encode())
+
+            # aquí se almacena la respuesta del receptor
+            response = None
+            # se espera confirmación del receptor
+            try:
+                # se consige la respuesta de confirmación
+                response = (self.recv_pure(buff_size_UDP))[0]
+                # se pasa a estructura (PUEDE QUE FALLE SI HAY MUCHO FLUJO, MENSAJE LLEGA MAL, CORREGIR)
+                response = self.parse_segment(response.decode())
+                # se revisa que tengo un ACK y que el nSec sea correcto
+                bool_ACK = response[1] == "1"
+                bool_nsec = int(response[3]) == self.nSec + len((str(len_mssg)).encode())
+
+                # si ambos están correctos, se continua y se actualiza el nSec                
+                if (bool_ACK and bool_nsec):
+                    length_sent = True
+                    self.set_nSec(int(response[3]))
+
+            # si es que falla
+            except TimeoutError:
+                pass
+
+        # bytes del mensaje enviados
+        bytes_sent = 0
+        # cuántos bytes envía el socketUDP cada vez
+        buff_size = 16
+
+        while bytes_sent < len_mssg:
+            # máximo byte hasta el que se va a enviar
+            max_byte = min(len_mssg, bytes_sent+buff_size)
+
+            # se obtiene el trozo del mensaje que se enviará
+            message_slice = message[bytes_sent: max_byte]
+
+            # número de bytes que enviamos
+            len_mssg_slice = len(message_slice)
+
+            # se crea estructura del mensaje (con el mensaje en forma de string)
+            mssg_slice_struct = ["0","0","0",str(self.nSec),message_slice.decode()]  
+            # se pasa a segmento
+            seg_slice = self.create_segment(mssg_slice_struct)
+            # se envía el segmento
+            self.send_pure(seg_slice.encode())
+
+            # se espera la respuesta del receptor
+            try:
+                #se consigue la respuesta de confirmación
+                response = self.recv_pure(buff_size_UDP)[0]
+                # se pasa a estructura (PUEDE QUE FALLE SI HAY MUCHO FLUJO, MENSAJE LLEGA MAL, CORREGIR)
+                response = self.parse_segment(response.decode())
+                # se revisa que tengo un ACK y que el nSec sea correcto
+                bool_ACK = response[1] = "1"
+                bool_nsec = int(response[3]) == self.nSec + len_mssg_slice
+
+                # si ambos son correctos, se continua con el mensaje
+                if(bool_ACK and bool_nsec):
+                    # se actualiza la cantidad de bytes enviados
+                    bytes_sent+=len_mssg_slice
+                    # se actualiza el número de secuencia
+                    self.nSec+= len_mssg_slice
+            
+            # si es que no llega a tiempo el mensaje
+            except TimeoutError:
+                pass
+    
+    # función que recibe un mensaje con un tamaño de buffer dado
+    def recv(self,buff_size):
+        # aquí se guarda el mensaje que retorna
+        ret_val = ""
+
+        # tamaño del buffer del socketUDP, headers+data
+        buff_size_UDP = 48
+        # se recibe el mensaje con el largo del mensaje total
+        len_initial_mssg = (self.recv_pure(buff_size_UDP))[0]
+        print(len_initial_mssg)
+        # se pasa a estructura
+        len_initial_mssg = self.parse_segment(len_initial_mssg.decode())
+        # se consigue el número de secuencia y la sección de datos
+        initial_mssg_sec = len_initial_mssg[3]
+        # se consigue la sección de datos
+        initial_mssg_data = len_initial_mssg[4]
+        # se consigue el largo del mensaje (en bytes) total
+        total_lenght = int(initial_mssg_data)
+        # se actualiza el número de secuencia
+        self.nSec = int(initial_mssg_sec) + len(initial_mssg_data.encode())
+        # si es que el mensaje total es más largo quel buffer
+        if (total_lenght > buff_size):
+            # se setela cuántos bytes faltan por leer en un futuro llamado de recv
+            self.bytes_left_to_read = total_lenght - buff_size
+
+        # se envía el mensaje ACK al emisor
+        initial_confrm_struct = ["0","1","0",str(self.nSec)]
+        # se pasa a seg
+        initial_confrm_seg = self.create_segment(initial_confrm_struct)
+        # se envía el mensaje al emisor
+        self.send_pure(initial_confrm_seg.encode())
+
+        # cuántos bytes hay que recibir
+        bytes_to_recieve = min(total_lenght, buff_size)
+
+        # bytes recibidos
+        bytes_recieved = 0
+        # ahora se empieza a conseguir el mensaje
+        while bytes_recieved < bytes_to_recieve:
+            # se espera un segmento
+            partial_message = (self.recv_pure(buff_size_UDP))[0]
+            # se pasa a estructura
+            partial_message = self.parse_segment(partial_message.decode())
+            # se consigue el número de secuencia y la sección de datos
+            mssg_nSec = partial_message[3]
+            # se consigue la data
+            mssg_data = partial_message[4]
+            
+            # se revisa si es segmento duplicado
+            if(int(mssg_nSec) < self.nSec):
+                # se debe enviar el ACK nuevamente
+                # se pasa a seg
+                ACK_seg = self.create_segment(["0","1","0",str(self.nSec)])
+                # se envía el mensaje al emisor
+                self.send_pure(ACK_seg.encode())
+
+            # si no es duplicado
+            else:
+                # se añade el segmento a el mensaje final
+                ret_val+= mssg_data
+                # se aumenta el número de bytes recibidos
+                bytes_recieved += len(mssg_data.encode())
+                # se actualiza el número de secuencia
+                self.nSec += len(mssg_data.encode())
+                # se debe enviar el ACK
+                ACK_seg = self.create_segment(["0","1","0",str(self.nSec)])
+                # se envía el mensaje al emisor
+                self.send_pure(ACK_seg.encode())
+
+        # se retorna el mensaje final (en bytes)
+        return ret_val.encode()
+
+
+
+
 
     # pasa segmento TCP a estructura
     @staticmethod
