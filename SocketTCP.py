@@ -425,20 +425,41 @@ class SocketTCP:
         FIN_seg = self.create_segment(FIN_struct)
         # se pasa a bytes
         FIN_seg = FIN_seg.encode()
+
+        # número de timeouts ocurridos sim recibir respuesta
+        timeouts = 0
+        # dice si se recibio SYN_ACK correctamente
+        SYN_ACK_correctly = False
+
         # se envía el mensaje que se quiere terminar la comunicacións
         self.send_pure(FIN_seg)
 
-        # se recibe la respuesta 
-        response = self.recv_pure(48)[0]
-        # se parsea a estcutura
-        response = self.parse_segment(response.decode())
-        # se verifican los headers y el nSec
-        # ACK
-        assert response[1] == "1"
-        # FIN
-        assert response[2] == "1"
-        # nSec
-        assert int(response[3]) == self.nSec + 1
+        while (not SYN_ACK_correctly) and timeouts < 4:
+            try:
+                # se recibe la respuesta 
+                response = self.recv_pure(48)[0]
+                # se parsea a estcutura
+                response = self.parse_segment(response.decode())
+                # se verifican los headers y el nSec
+                # ACK
+                bool_ACK = response[1] == "1"
+                # FIN
+                bool_FIN =  response[2] == "1"
+                # nSec
+                bool_nSec =  int(response[3]) == self.nSec + 1
+
+                # si los 3 son correctos
+                if(bool_ACK and bool_FIN and bool_nSec):
+                    # se sale del while
+                    SYN_ACK_correctly = True
+
+            # se aumenta timeout
+            except TimeoutError:
+                timeouts += 1
+
+        # si hay más de 3 se asume termino de conexión
+        if(timeouts > 3):
+            return
 
         # se actualiza el número de secuencia
         self.nSec += 2
@@ -448,21 +469,38 @@ class SocketTCP:
         ACK_seg = self.create_segment(ACK_struct)
         # se pasa a bytes
         ACK_seg = ACK_seg.encode()
-        # se envía el mensaje que se quiere terminar la comunicacións
-        self.send_pure(ACK_seg)
+
+        timeouts = 0
+
+        while timeouts <= 3:
+            # se envía el mensaje que se quiere terminar la comunicacións
+            self.send_pure(ACK_seg)
+
+            try:
+                # se espera tiemout 
+                self.recv_pure(48)
+            except TimeoutError:
+                # se aumenta tiemouts 
+                timeouts += 1
 
     def recv_close(self):
-        # se recibe la petición de fin 
-        request = self.recv_pure(48)[0]
-        # se parsea a estcutura
-        request = self.parse_segment(request.decode())
-        # se verifican los headers y el nSec
-        # ACK
-        assert request[1] == "0"
-        # FIN
-        assert request[2] == "1"
-        # nSec
-        nSec_request = int(request[3])
+        # hasta que se reciba petición de cierre
+        fin_recieved = False
+
+        while not fin_recieved:
+            # se recibe la petición de fin 
+            request = self.recv_pure(48)[0]
+            # se parsea a estcutura
+            request = self.parse_segment(request.decode())
+            # se verifican los headers
+            # ACK
+            bool_ACK = request[1] == "0"
+            # FIN
+            bool_FIN = request[2] == "1"
+            # nSec
+            nSec_request = int(request[3])
+            if(bool_ACK and bool_FIN):
+                fin_recieved = True
 
         # se crea el mensaje de fin ack para el emisor 
         FIN_ACK_struct = ["0","1","1",str(nSec_request+1)]
@@ -473,12 +511,31 @@ class SocketTCP:
         # se envía el mensaje que se quiere terminar la comunicacións
         self.send_pure(FIN_ACK_seg)
 
-        # se recibe la confirmación de fina de fin 
-        confirm = self.recv_pure(48)[0]
-        # se parsea a estcutura
-        confirm = self.parse_segment(confirm.decode())
-        # se verifican los headers y el nSec
-        # ACK
-        assert confirm[1] == "1"
-        # nSec
-        assert int(confirm[3]) == nSec_request + 2
+        # dice si se ha recibido un mensaje ACK
+        ack_recieved = False
+        # número de tiemouts
+        timeouts = 0
+
+        while not ack_recieved and timeouts < 4: 
+            try:
+                # se recibe la confirmación de confirmación de fin 
+                confirm = self.recv_pure(48)[0]
+                # se parsea a estcutura
+                confirm = self.parse_segment(confirm.decode())
+                # se verifican los headers
+                # ACK
+                bool_ACK = confirm[1] == "1"
+                # FIN 
+                bool_FIN = confirm[2] == "0"
+
+                # si se confirma el FIN
+                if(bool_ACK and bool_FIN):
+                    # se termina la conexión
+                    return
+
+            # si hay tiemout
+            except TimeoutError:
+                timeouts += 1
+        
+        # se termina la conexión 
+        return

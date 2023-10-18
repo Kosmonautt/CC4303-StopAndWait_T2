@@ -5,7 +5,7 @@ address = ("localhost", 8000)
 client_socketTCP = SocketTCP.SocketTCP()
 client_socketTCP.connect(address)
 # client socket no tiene timeout
-client_socketTCP.set_timeout(0)
+# client_socketTCP.set_timeout(None)
 
 # test 1
 message = "Mensje de len=16".encode()
