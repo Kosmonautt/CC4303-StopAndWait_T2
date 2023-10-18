@@ -297,23 +297,32 @@ class SocketTCP:
         seg_SYN = self.create_segment(struct_handshake)
         # se pasa a bytes
         seg_SYN = seg_SYN.encode()
-        # se envía el mensaje
-        self.send_pure(seg_SYN)
+        # dice si se recibió correctamente la respuesta del recpetors
+        ack_corretly = False
 
-        # se recibe la respuesta  SYN+ACK del server con el mensaje y la dirección de la response
-        message_SYN_ACK, response_adress = self.recv_pure(buff_size)
-        # se setea la nueva dirección de destino
-        self.set_dirDestination(response_adress)
-        # se pasa el mensaje a una estructura
-        struct_handshake_response = self.parse_segment(message_SYN_ACK.decode())
+        while not ack_corretly:
+            # se envía el mensaje
+            self.send_pure(seg_SYN)
 
-        # se revisa que los headers sean correctos
-        # SYN
-        assert struct_handshake_response[0] == "1"
-        # ACK 
-        assert struct_handshake_response[1] == "1"
-        # se revisa que el número de secuencia sea correcto
-        assert int(struct_handshake_response[3]) == (self.nSec + 1)
+            # se recibe la respuesta  SYN+ACK del server con el mensaje y la dirección de la response
+            message_SYN_ACK, response_adress = self.recv_pure(buff_size)
+            # se setea la nueva dirección de destino
+            self.set_dirDestination(response_adress)
+            # se pasa el mensaje a una estructura
+            struct_handshake_response = self.parse_segment(message_SYN_ACK.decode())
+
+            # se revisa que los headers sean correctos
+            # SYN
+            bool_SYN = struct_handshake_response[0] == "1"
+            # ACK 
+            bool_ACK = struct_handshake_response[1] == "1"
+            # se revisa que el número de secuencia sea correcto
+            bool_nSec = int(struct_handshake_response[3]) == (self.nSec + 1)
+
+            # si todos son correctos
+            if(bool_SYN and bool_ACK and bool_nSec):
+                # se sale del while
+                ack_corretly = True
         
         # se actualiza el número de secuencia
         self.nSec += 2
@@ -325,25 +334,36 @@ class SocketTCP:
         seg_ACK = self.create_segment(struct_handshake_ACK)
         # se pasa a bytes
         seg_ACK = seg_ACK.encode()
+
+        # caso borde
+
         # se envía el mensaje
         self.send_pure(seg_ACK)
 
     # función que espera una petición syn, si el handshake
     # se realiza correctamente retorna un nuevo objeto SocketTCP
     def accept(self):
-        # se recibe la petición SYN
-        message_SYN, address_SYN = self.recv_pure(buff_size)
-        # se pasa el mensaje a estructura
-        struct_handshake_SYN = self.parse_segment(message_SYN.decode())
+        # dice si la petición se reciió correctamente 
+        syn_correctly = False
 
-        # se revisa que los headers sean correctos
-        # SYN
-        assert struct_handshake_SYN[0] == "1"
-        # ACK
-        assert struct_handshake_SYN[1] == "0"
-        # se consigue el número de secuencia
-        nsec_SYN = int(struct_handshake_SYN[3])
+        while not syn_correctly:
+            # se recibe la petición SYN
+            message_SYN, address_SYN = self.recv_pure(buff_size)
+            # se pasa el mensaje a estructura
+            struct_handshake_SYN = self.parse_segment(message_SYN.decode())
 
+            # se revisa que los headers sean correctos
+            # SYN
+            bool_SYN = struct_handshake_SYN[0] == "1"
+            # ACK
+            bool_ACK = struct_handshake_SYN[1] == "0"
+            # se consigue el número de secuencia
+            nsec_SYN = int(struct_handshake_SYN[3])
+
+            # si es que los valores recibidos son correctos
+            if (bool_SYN and bool_ACK and (type(nsec_SYN) == int)):
+                syn_correctly = True
+        
         # se crea el socket que se comunicará con el cliente
         response_SocketTCP = SocketTCP()
         # se le setea el número de secuencia
@@ -361,27 +381,39 @@ class SocketTCP:
         seg_SYN_ACK = self.create_segment(struct_handshake_SYN_ACK)
         # se pasa a bytes
         seg_SYN_ACK = seg_SYN_ACK.encode()
-        # se envía el mensaje
-        response_SocketTCP.send_pure(seg_SYN_ACK)
 
-        # se recibe la petición ACK
-        message_ACK, address_ACK = response_SocketTCP.recv_pure(buff_size)
-        # se pasa el mensaje a estructura
-        struct_handshake_ACK = self.parse_segment(message_ACK.decode())
+        # dice si se recibió el ack corectamente
+        ack_correctly = False
+        
+        while not ack_correctly:
+            # se envía el mensaje
+            response_SocketTCP.send_pure(seg_SYN_ACK)
 
-        # se revisa que headers, número de secuencia y address sean correctos
-        # SYN
-        assert struct_handshake_ACK[0] == "0"
-        # ACK
-        assert struct_handshake_ACK[1] == "1"
-        # se consigue el número de secuencia
-        nsec_ACK = int(struct_handshake_ACK[3])
-        # se revisa que sea correcto
-        assert response_SocketTCP.nSec + 1 == nsec_ACK
-        # se le setea el nuevo nsec
-        response_SocketTCP.set_nSec(nsec_ACK)
-        # se revisa que la dirección recibida se la misma
-        assert address_ACK == response_SocketTCP.dirDestination
+            # se recibe la petición ACK
+            message_ACK, address_ACK = response_SocketTCP.recv_pure(buff_size)
+            # se pasa el mensaje a estructura
+            struct_handshake_ACK = self.parse_segment(message_ACK.decode())
+
+            # se obtienen headers, número de secuencia y address
+            # SYN
+            bool_ACK = struct_handshake_ACK[0] == "0"
+            # ACK
+            bool_SYN = struct_handshake_ACK[1] == "1"
+            # se consigue el número de secuencia
+            nsec_ACK = int(struct_handshake_ACK[3])
+
+            # si es que se recib el mensaje ACK
+            if(bool_ACK and bool_SYN and (response_SocketTCP.nSec + 1 == nsec_ACK)):
+                # se le setea el nuevo nsec
+                response_SocketTCP.set_nSec(nsec_ACK)
+                # se revisa que la dirección recibida se la misma
+                assert address_ACK == response_SocketTCP.dirDestination
+                # se cambia la variable
+                ack_correctly = True
+            # si se resive el mensaje SYN de nuevo
+            elif((not bool_ACK) and (not bool_SYN) and (response_SocketTCP.nSec -1 == nsec_ACK)):
+                # se manda de nuevo el mensaje SYN_ACK (osea se contiúa el while)
+                continue
 
         # finalmente se retorna el socket y adress 
         return response_SocketTCP, response_SocketTCP.dirOrigin

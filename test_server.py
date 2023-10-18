@@ -27,6 +27,17 @@ print("Test 3 received:", message_part_1 + message_part_2)
 if (message_part_1 + message_part_2) == "Mensaje de largo 19".encode(): print("Test 3: Passed")
 else: print("Test 3: Failed")
 
+# test 4
+buff_size = 14
+message_part_1 = connection_socketTCP.recv(buff_size)
+message_part_2 = connection_socketTCP.recv(buff_size)
+message_part_3 = connection_socketTCP.recv(buff_size)
+message_part_4 = connection_socketTCP.recv(buff_size)
+
+print("Test 4 received:", message_part_1 + message_part_2 + message_part_3 + message_part_4)
+if (message_part_1 + message_part_2 + message_part_3 + message_part_4) == "Un super test bastante largo de más que 19 bytes".encode(): print("Test 4: Passed")
+else: print("Test 4: Failed")
+
 connection_socketTCP.recv_close()
 
 print("fin")
