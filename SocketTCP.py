@@ -5,7 +5,7 @@ buff_size = 48
 
 class SocketTCP:
     def __init__(self):
-        self.socketUDP = None
+        self.socketUDP = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.dirDestination = None
         self.dirOrigin = None
         self.nSec = None
@@ -346,8 +346,6 @@ class SocketTCP:
 
         # se crea el socket que se comunicará con el cliente
         response_SocketTCP = SocketTCP()
-        # se le da un socket UDP para que funcione
-        response_SocketTCP.set_socketUDP(socket.socket(socket.AF_INET, socket.SOCK_DGRAM))
         # se le setea el número de secuencia
         response_SocketTCP.set_nSec(nsec_SYN+1)
         # se le da una nueva dirección de destino (la del cliente)
