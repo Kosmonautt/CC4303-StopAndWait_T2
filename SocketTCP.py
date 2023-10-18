@@ -15,6 +15,10 @@ class SocketTCP:
         self.buffSize = None
         # dice si queda por leer del mensaje con un recv
         self.bytes_left_to_read = 0
+        # caché del sockt
+        self.cache = None
+        # dice si el caché está vacío
+        self.cache_empty = True
     
     # setters de los diferentes parámetros
     def set_socketUDP(self, socketUDP):
@@ -130,36 +134,52 @@ class SocketTCP:
     def recv(self,buff_size):
         # aquí se guarda el mensaje que retorna
         ret_val = ""
-
         # tamaño del buffer del socketUDP, headers+data
         buff_size_UDP = 48
-        # se recibe el mensaje con el largo del mensaje total
-        len_initial_mssg = (self.recv_pure(buff_size_UDP))[0]
-        print(len_initial_mssg)
-        # se pasa a estructura
-        len_initial_mssg = self.parse_segment(len_initial_mssg.decode())
-        # se consigue el número de secuencia y la sección de datos
-        initial_mssg_sec = len_initial_mssg[3]
-        # se consigue la sección de datos
-        initial_mssg_data = len_initial_mssg[4]
-        # se consigue el largo del mensaje (en bytes) total
-        total_lenght = int(initial_mssg_data)
-        # se actualiza el número de secuencia
-        self.nSec = int(initial_mssg_sec) + len(initial_mssg_data.encode())
-        # si es que el mensaje total es más largo quel buffer
-        if (total_lenght > buff_size):
-            # se setela cuántos bytes faltan por leer en un futuro llamado de recv
-            self.bytes_left_to_read = total_lenght - buff_size
 
-        # se envía el mensaje ACK al emisor
-        initial_confrm_struct = ["0","1","0",str(self.nSec)]
-        # se pasa a seg
-        initial_confrm_seg = self.create_segment(initial_confrm_struct)
-        # se envía el mensaje al emisor
-        self.send_pure(initial_confrm_seg.encode())
+        # si es que bytes_left no es 0, entonces no se busca el largo de nuevo
+        if(self.bytes_left_to_read == 0):
+            # se recibe el mensaje con el largo del mensaje total
+            len_initial_mssg = (self.recv_pure(buff_size_UDP))[0]
+            # se pasa a estructura
+            len_initial_mssg = self.parse_segment(len_initial_mssg.decode())
+            # se consigue el número de secuencia y la sección de datos
+            initial_mssg_sec = len_initial_mssg[3]
+            # se consigue la sección de datos
+            initial_mssg_data = len_initial_mssg[4]
+            # se consigue el largo del mensaje (en bytes) total
+            total_lenght = int(initial_mssg_data)
+            # se actualiza el número de secuencia
+            self.nSec = int(initial_mssg_sec) + len(initial_mssg_data.encode())
+            # bytes que se deben leer
+            self.bytes_left_to_read = total_lenght
+            # se envía el mensaje ACK al emisor
+            initial_confrm_struct = ["0","1","0",str(self.nSec)]
+            # se pasa a seg
+            initial_confrm_seg = self.create_segment(initial_confrm_struct)
+            # se envía el mensaje al emisor
+            self.send_pure(initial_confrm_seg.encode())
+
+        # antes de hacer un recv, se revisa el caché
+        if(not self.cache_empty):
+            # se debe revisar si el caché es más grande que el buff size
+            if(len(self.cache)>buff_size):
+                # solo se consigue lo necesario
+                ret_val_buff_size = (self.cache)[0:buff_size]
+                # el resto se queda en el caché
+                self.cache = self.cache[buff_size:len(self.cache)]
+                # se agrega al valor de retorno
+                ret_val += ret_val_buff_size.decode()
+            else:
+                # se agrega al valor de retorno
+                ret_val += (self.cache).decode()
+                # si es más peqeueño, se saca por completo
+                self.cache = None
+                self.cache_empty = True 
+
 
         # cuántos bytes hay que recibir
-        bytes_to_recieve = min(total_lenght, buff_size)
+        bytes_to_recieve = min(self.bytes_left_to_read, buff_size)
 
         # bytes recibidos
         bytes_recieved = 0
@@ -194,6 +214,30 @@ class SocketTCP:
                 ACK_seg = self.create_segment(["0","1","0",str(self.nSec)])
                 # se envía el mensaje al emisor
                 self.send_pure(ACK_seg.encode())
+
+        # se restan los bytes recibidos de los bytes left to read
+        self.bytes_left_to_read -= bytes_recieved
+
+        # se revisa si el mensaje es más grande que el buffer
+        if (len(ret_val.encode()) > buff_size):
+            # si lo es, se guarda el resto en el caché
+            ret_val_buff_size = (ret_val.encode())[0:buff_size]
+            to_cache = (ret_val.encode())[buff_size:len(ret_val.encode())]
+            # para el caso de caché vacío 
+            if(self.cache_empty):
+                self.cache = to_cache
+                self.cache_empty = False
+                # se actualiza el resultdo que retorna 
+                ret_val = ret_val_buff_size.decode()
+
+            # caché no vacío
+            else:
+                # se consigue la primera parte del nuevo caché
+                cache = self.cache
+                # se les hace append a ambos
+                new_cache = (cache.decode()) + (to_cache.decode())
+                # se agrega al caché
+                self.cache = new_cache.encode()
 
         # se retorna el mensaje final (en bytes)
         return ret_val.encode()
