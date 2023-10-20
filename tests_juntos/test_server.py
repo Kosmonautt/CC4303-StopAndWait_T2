@@ -5,6 +5,9 @@ server_socketTCP = SocketTCP.SocketTCP()
 server_socketTCP.bind(address)
 connection_socketTCP, new_address = server_socketTCP.accept()
 
+# debug
+# connection_socketTCP.debug = True
+
 # test 1
 buff_size = 16
 full_message = connection_socketTCP.recv(buff_size)
