@@ -23,6 +23,8 @@ class SocketTCP:
         self.cache_empty = True
         # debug
         self.debug = False
+        # para el caso borde 
+        # por implementar
     
     # setters de los diferentes parámetros
     def set_socketUDP(self, socketUDP):
@@ -42,7 +44,7 @@ class SocketTCP:
 
     # si está activado el modo debug imprime el mensaje
     def debug_print(self, place):
-        if(True):
+        if(self.debug):
             print("Manejando perdidas en "+ place)
 
     # envía el mensaje (en bytes) dado a la dirección ya seteada con su número de secuencia
