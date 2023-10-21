@@ -44,7 +44,7 @@ class SocketTCP:
 
     # si está activado el modo debug imprime el mensaje
     def debug_print(self, place):
-        if(True):
+        if(self.debug):
             print("Manejando perdidas en "+ place)
 
     # envía el mensaje (en bytes) dado a la dirección ya seteada con su número de secuencia
