@@ -156,6 +156,13 @@ class SocketTCP:
 
         # si es que bytes_left no es 0, entonces no se busca el largo de nuevo
         if(self.bytes_left_to_read == 0):
+
+            if(not self.cache_empty):
+                self.cache_empty = True
+                fix_cache = self.cache
+                self.cache = None
+                return fix_cache
+
             # se recibe el mensaje con el largo del mensaje total
             len_initial_mssg = (self.recv_pure(buff_size_UDP))[0]
             # se pasa a estructura
